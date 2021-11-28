@@ -21,7 +21,7 @@ namespace Laborator3
 
         static void Main(string[] args)
         {
-            UploadFile();
+            UploadFile2();
             UserCredential credential;
 
             using (var stream =
@@ -108,6 +108,41 @@ namespace Laborator3
             static void Upload_ResponseReceived(Google.Apis.Drive.v3.Data.File file) =>
                 Console.WriteLine(file.Name + " was uploaded successfully");
         }
+
+         static void UploadFile2()
+         {
+             UserCredential credential;
+
+            using (var stream =
+                new FileStream("credentials.json", FileMode.Open, FileAccess.Read))
+            {
+                string credPath = "token.json";
+                credential = GoogleWebAuthorizationBroker.AuthorizeAsync(
+                    GoogleClientSecrets.Load(stream).Secrets,
+                    Scopes,
+                    "user",
+                    CancellationToken.None,
+                    new FileDataStore(credPath, true)).Result;
+                Console.WriteLine("Credential file saved to: " + credPath);
+            }
+
+            var service = new DriveService(new BaseClientService.Initializer()
+            {
+                HttpClientInitializer = credential,
+                ApplicationName = ApplicationName,
+            });
+
+             var body=new Google.Apis.Drive.v3.Data.File();
+             body.Name="test.txt";
+             body.MimeType="text/plain";
+
+             var byteArray=System.IO.File.ReadAllBytes("test.txt");
+             System.IO.MemoryStream streamFile=new System.IO.MemoryStream(byteArray);
+
+             var request=service.Files.Create(body,streamFile, "text/plain");
+             request.Upload();
+             Console.WriteLine(request.ResponseBody);
+         }
 
     }
 
