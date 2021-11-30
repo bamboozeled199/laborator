@@ -1,4 +1,3 @@
-
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -6,7 +5,9 @@ using System.Threading.Tasks;
 using Laborator4.Models;
 using Microsoft.Extensions.Configuration;
 using Microsoft.WindowsAzure.Storage;
+using Azure.Storage.Queues;
 using Microsoft.WindowsAzure.Storage.Table;
+using Newtonsoft.Json;
 
 namespace Laborator4.Repositories
 {
@@ -16,6 +17,8 @@ namespace Laborator4.Repositories
         private CloudTable _studentsTable;
 
         private string _storageConnectionString;
+
+        const string QueueName = "students-queue";
 
         public StudentsRepository(IConfiguration configuration)
         {
@@ -27,12 +30,21 @@ namespace Laborator4.Repositories
 
         public async Task<StudentModel> CreateStudent(StudentModel student)
         {
-            var insertOperation = TableOperation.Insert(new StudentEntity(student));
+            // var insertOperation = TableOperation.Insert(new StudentEntity(student));
 
-            await _studentsTable.ExecuteAsync(insertOperation);
-            var studentEntity = await getStudentLogic(student.University, student.CNP);
+            // await _studentsTable.ExecuteAsync(insertOperation);
 
-            return new StudentModel(studentEntity);
+            var jsonStudent = JsonConvert.SerializeObject(student);
+            var plainTextBytes = System.Text.Encoding.UTF8.GetBytes(jsonStudent);
+            var base64String=System.Convert.ToBase64String(plainTextBytes);
+
+            QueueClient queueClient = new QueueClient(_storageConnectionString, QueueName);
+            await queueClient.SendMessageAsync(base64String);
+            queueClient.CreateIfNotExists();
+            // var studentEntity = await getStudentLogic(student.University, student.CNP);
+
+            // return new StudentModel(studentEntity);
+            return student;
         }
 
         public async Task<List<StudentModel>> GetAllStudents()
